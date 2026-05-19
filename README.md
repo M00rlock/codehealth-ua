@@ -530,3 +530,18 @@ The project is not production-ready yet, but the local analyzer already works an
 - `-v` CLI alias
 - Better usage output
 - Better error message for missing `--out` value
+
+
+## 0.0.7 
+
+Before:
+- шукав переважно src/
+- не бачив nested projects
+- міг показувати Source files: 0
+- framework unknown
+
+After:
+- бачить apps/packages/custom-folder/src
+- бачить nested package.json
+- краще визначає framework/language/package manager
+- test files не зараховуються як production source
