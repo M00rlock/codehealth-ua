@@ -485,18 +485,18 @@ const scripts = Object.assign(
     devDependenciesCount: Object.keys(devDependencies).length,
   };
 
-const frameworks = detectFrameworks(allDependencies);
+  const frameworks = detectFrameworks(allDependencies);
 
-const projectMeta: ProjectMeta = {
-  frameworks,
-  primaryFramework: detectPrimaryFramework(frameworks),
-  language: await detectLanguage({
-    projectPath,
-    hasTypeScript: packageHealth.hasTypeScript,
-    sourceFiles: productionSourceFiles,
-  }),
-  packageManager: await detectPackageManager(projectPath, packageJson),
-};
+  const projectMeta: ProjectMeta = {
+    frameworks,
+    primaryFramework: detectPrimaryFramework(frameworks),
+    language: await detectLanguage({
+      projectPath,
+      hasTypeScript: packageHealth.hasTypeScript,
+      sourceFiles: productionSourceFiles,
+    }),
+    packageManager: await detectPackageManager(projectPath, packageJson),
+  };
 
   const testRatio =
     productionSourceFiles.length === 0

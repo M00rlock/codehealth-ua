@@ -4,18 +4,15 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "vitest",
-    "analyze": "pnpm --filter @codehealth/analyzer dev"
+    "test": "vitest run",
+    "analyze": "pnpm --filter @codehealth/analyzer dev",
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devEngines": {
-    "packageManager": {
-      "name": "pnpm",
-      "version": "^11.1.2",
-      "onFail": "download"
-    }
+    "packageManager": "pnpm@11.1.3"
   },
   "type": "module",
   "devDependencies": {
