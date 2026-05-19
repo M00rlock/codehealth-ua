@@ -6,7 +6,7 @@
   "main": "index.js",
   "scripts": {
     "test": "vitest",
-    "analyze": "pnpm --filter @codehealth/analyzer dev",
+    "analyze": "pnpm --filter @m00rl0ck/codehealth-ua dev",
     "typecheck": "tsc --noEmit"
   },
   "keywords": [],

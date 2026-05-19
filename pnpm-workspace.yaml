@@ -3,6 +3,9 @@ packages:
   - "packages/*"
 allowBuilds:
   esbuild: true
-  
+
+minimumReleaseAgeExclude:
+  - '@m00rl0ck/codehealth-ua@0.1.3'
+
 onlyBuiltDependencies:
   - esbuild
