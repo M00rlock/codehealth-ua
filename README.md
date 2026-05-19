@@ -399,8 +399,8 @@ The first public MVP should include:
 - [x] Add JSON output
 - [x] Add report export
 - [x] Add Markdown report output
-- [ ] Add better source file patterns (v0.0.5)
-- [ ] Add CLI help command
+- [x] Add better source file patterns (v0.0.5)
+- [x] Add CLI help command
 - [ ] Add tests for analyzer
 - [ ] Add GitHub Actions CI
 
@@ -520,3 +520,13 @@ The project is not production-ready yet, but the local analyzer already works an
 - `--md` CLI alias
 - Markdown report export via `--out`
 - Automatic output directory creation
+
+## 0.0.6
+
+### Added
+- `--help` CLI command
+- `-h` CLI alias
+- `--version` CLI command
+- `-v` CLI alias
+- Better usage output
+- Better error message for missing `--out` value

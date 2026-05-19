@@ -7,22 +7,66 @@ import { generateMarkdownReport } from './markdown.js';
 
 const args = process.argv.slice(2);
 
-const targetPath = args.find(arg => !arg.startsWith('--'));
+const isHelp = args.includes('--help') || args.includes('-h');
+const isVersion = args.includes('--version') || args.includes('-v');
+
+const targetPath = args.find(arg => !arg.startsWith('-'));
 const isJsonOutput = args.includes('--json');
 const isMarkdownOutput = args.includes('--markdown') || args.includes('--md');
 
 const outIndex = args.indexOf('--out');
 const outputPath = outIndex >= 0 ? args[outIndex + 1] : undefined;
 
+function printHelp() {
+  console.log(`
+    CodeHealth UA
+
+    Usage:
+      codehealth <path-to-project> [options]
+
+    Options:
+      --json               Print report as JSON
+      --markdown, --md     Print report as Markdown
+      --out <file>         Save report to file
+      --help, -h           Show help
+      --version, -v        Show version
+
+    Examples:
+      codehealth ../my-project
+      codehealth ../my-project --json
+      codehealth ../my-project --markdown
+      codehealth ../my-project --markdown --out reports/report.md
+      codehealth ../my-project --out codehealth-report.json
+    `);
+}
+
+async function readCliVersion(): Promise<string> {
+  const packageJsonUrl = new URL('../package.json', import.meta.url);
+  const packageJsonRaw = await fs.readFile(packageJsonUrl, 'utf-8');
+  const packageJson = JSON.parse(packageJsonRaw) as { version?: string };
+
+  return packageJson.version ?? '0.0.0';
+}
+
+if (isHelp) {
+  printHelp();
+  process.exit(0);
+}
+
+if (isVersion) {
+  const version = await readCliVersion();
+  console.log(version);
+  process.exit(0);
+}
+
 if (!targetPath) {
-  console.error(
-    'Usage: codehealth <path-to-project> [--json] [--markdown] [--out <file>]',
-  );
+  printHelp();
   process.exit(1);
 }
 
 if (outIndex >= 0 && !outputPath) {
   console.error('Missing output file after --out');
+  console.error('Example: codehealth ../my-project --out codehealth-report.json');
   process.exit(1);
 }
 
