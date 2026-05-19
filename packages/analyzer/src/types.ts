@@ -49,10 +49,20 @@ export interface TestHealth {
   status: 'none' | 'low' | 'ok';
 }
 
+export type RecommendationType =
+  | 'package'
+  | 'file'
+  | 'testing'
+  | 'maintainability'
+  | 'dependencies'
+  | 'project-setup';
+
 export interface Recommendation {
-  type: 'package' | 'file' | 'testing';
+  type: RecommendationType;
   severity: RiskLevel;
+  title: string;
   message: string;
+  suggestion: string;
 }
 
 export interface CodeHealthReport {

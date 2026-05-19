@@ -90,17 +90,37 @@ function buildRecommendations(params: {
 
   if (!packageHealth.hasTestScript) {
     recommendations.push({
-      type: 'package',
+      type: 'project-setup',
       severity: 'high',
-      message: 'Додай test script у package.json, щоб проєкт мав стандартний спосіб запуску тестів.',
+      title: 'Missing test script',
+      message:
+        'У package.json не знайдено test script. Це ускладнює перевірку проєкту перед деплоєм або pull request.',
+      suggestion:
+        'Додай test script. Наприклад: "test": "vitest" або "test": "jest".',
     });
   }
 
   if (!packageHealth.hasLintScript) {
     recommendations.push({
-      type: 'package',
+      type: 'project-setup',
       severity: 'medium',
-      message: 'Додай lint script у package.json для стабільнішої якості коду.',
+      title: 'Missing lint script',
+      message:
+        'У package.json не знайдено lint script. Без нього складніше підтримувати єдиний стиль і базову якість коду.',
+      suggestion:
+        'Додай lint script. Наприклад: "lint": "eslint .".',
+    });
+  }
+
+  if (!packageHealth.hasBuildScript) {
+    recommendations.push({
+      type: 'project-setup',
+      severity: 'medium',
+      title: 'Missing build script',
+      message:
+        'У package.json не знайдено build script. Це може ускладнити CI/CD або production deployment.',
+      suggestion:
+        'Додай build script відповідно до фреймворку. Наприклад: "build": "nuxt build", "build": "ng build" або "build": "tsc".',
     });
   }
 
@@ -108,7 +128,35 @@ function buildRecommendations(params: {
     recommendations.push({
       type: 'package',
       severity: 'medium',
-      message: 'Проєкт не має TypeScript у dependencies/devDependencies. Для великих JS-проєктів типізація може зменшити кількість помилок.',
+      title: 'TypeScript is not detected',
+      message:
+        'TypeScript не знайдено у dependencies/devDependencies. Для середніх і великих JS-проєктів типізація допомагає зменшити кількість runtime-помилок.',
+      suggestion:
+        'Якщо це production-проєкт, розглянь поступову міграцію на TypeScript або хоча б JSDoc typing для критичних модулів.',
+    });
+  }
+
+  if (!packageHealth.hasEslint) {
+    recommendations.push({
+      type: 'project-setup',
+      severity: 'medium',
+      title: 'ESLint is not detected',
+      message:
+        'ESLint не знайдено у dependencies/devDependencies. Це означає, що частина помилок стилю, імпортів або потенційних багів може не ловитись автоматично.',
+      suggestion:
+        'Додай ESLint із конфігурацією під твій стек. Для Nuxt можна використати Nuxt ESLint module, для Angular — @angular-eslint.',
+    });
+  }
+
+  if (!packageHealth.hasPrettier) {
+    recommendations.push({
+      type: 'project-setup',
+      severity: 'low',
+      title: 'Prettier is not detected',
+      message:
+        'Prettier не знайдено у dependencies/devDependencies. Це не критично, але автоформатування зменшує шум у pull requests.',
+      suggestion:
+        'Додай Prettier або переконайся, що форматування покривається іншим інструментом.',
     });
   }
 
@@ -116,7 +164,11 @@ function buildRecommendations(params: {
     recommendations.push({
       type: 'testing',
       severity: 'high',
-      message: 'Тести не знайдені. Почни хоча б з unit-тестів для основної бізнес-логіки.',
+      title: 'No tests found',
+      message:
+        'Тестові файли не знайдені. Це підвищує ризик регресій при зміні логіки.',
+      suggestion:
+        'Почни з unit-тестів для core-функцій, сервісів, composables або utility-модулів. Не треба покривати все одразу.',
     });
   }
 
@@ -124,23 +176,97 @@ function buildRecommendations(params: {
     recommendations.push({
       type: 'testing',
       severity: 'medium',
-      message: 'Тестів мало відносно кількості source-файлів. Варто покрити критичні модулі.',
+      title: 'Low test signal',
+      message:
+        `Знайдено ${testHealth.testFiles} тестових файлів на ${testHealth.sourceFiles} source-файлів. Це низьке співвідношення для стабільного проєкту.`,
+      suggestion:
+        'Покрий тестами найбільш ризикові місця: бізнес-логіку, форматери, API-клієнти, сервіси та складні компоненти.',
     });
   }
 
-  
-  const riskyFiles = fileHealth.filter(file => file.riskLevel === 'high');
+  const largeFiles = fileHealth
+    .filter(file => file.lines > 200)
+    .sort((a, b) => b.lines - a.lines)
+    .slice(0, 5);
 
-  for (const file of riskyFiles.slice(0, 5)) {
+  for (const file of largeFiles) {
     recommendations.push({
-      type: 'file',
-      severity: 'high',
-      message: `Файл ${file.file} має високий ризик: ${file.lines} рядків, ${file.anyUsages} any, ${file.consoleLogs} console.log, ${file.todos} TODO/FIXME.`,
+      type: 'maintainability',
+      severity: file.lines > 350 ? 'high' : 'medium',
+      title: 'Large file detected',
+      message:
+        `Файл ${file.file} має ${file.lines} рядків. Великі файли складніше читати, тестувати і безпечно змінювати.`,
+      suggestion:
+        'Спробуй розділити файл на менші частини: component/service/helper/mapper/types або винести повторювану логіку в окремий модуль.',
+    });
+  }
+
+  const filesWithAny = fileHealth
+    .filter(file => file.anyUsages > 0)
+    .sort((a, b) => b.anyUsages - a.anyUsages)
+    .slice(0, 5);
+
+  for (const file of filesWithAny) {
+    recommendations.push({
+      type: 'maintainability',
+      severity: file.anyUsages > 5 ? 'high' : 'medium',
+      title: 'Any usage detected',
+      message:
+        `Файл ${file.file} містить ${file.anyUsages} використань any. Це послаблює TypeScript і може приховувати помилки.`,
+      suggestion:
+        'Заміни any на конкретний тип, unknown з type guard, generic або окремий interface/type.',
+    });
+  }
+
+  const filesWithConsoleLogs = fileHealth
+    .filter(file => file.consoleLogs > 0)
+    .sort((a, b) => b.consoleLogs - a.consoleLogs)
+    .slice(0, 5);
+
+  for (const file of filesWithConsoleLogs) {
+    recommendations.push({
+      type: 'maintainability',
+      severity: 'low',
+      title: 'Console log detected',
+      message:
+        `Файл ${file.file} містить ${file.consoleLogs} console.log. У production-коді це може створювати шум або випадково показувати зайву інформацію.`,
+      suggestion:
+        'Прибери console.log або заміни на logger/debug utility з контролем середовища.',
+    });
+  }
+
+  const filesWithTodos = fileHealth
+    .filter(file => file.todos > 0)
+    .sort((a, b) => b.todos - a.todos)
+    .slice(0, 5);
+
+  for (const file of filesWithTodos) {
+    recommendations.push({
+      type: 'maintainability',
+      severity: 'low',
+      title: 'TODO/FIXME comments detected',
+      message:
+        `Файл ${file.file} містить ${file.todos} TODO/FIXME коментарів. Це може бути сигналом незавершеної або тимчасової логіки.`,
+      suggestion:
+        'Перенеси TODO у issue tracker або перетвори їх на конкретні задачі з пріоритетом.',
+    });
+  }
+
+  if (packageHealth.dependenciesCount > 40) {
+    recommendations.push({
+      type: 'dependencies',
+      severity: 'medium',
+      title: 'Many production dependencies',
+      message:
+        `Проєкт має ${packageHealth.dependenciesCount} production dependencies. Велика кількість залежностей збільшує surface area для security і maintenance ризиків.`,
+      suggestion:
+        'Перевір, чи всі dependencies справді потрібні в runtime. Частину можна перенести в devDependencies або видалити.',
     });
   }
 
   return recommendations;
 }
+
 async function fileExists(filePath: string): Promise<boolean> {
   try {
     await fs.access(filePath);

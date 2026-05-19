@@ -95,7 +95,9 @@ if (outIndex >= 0 && !outputPath) {
     console.log('Recommendations:');
 
     for (const recommendation of report.recommendations) {
-      console.log(`- [${recommendation.severity}] ${recommendation.message}`);
+      console.log(`- [${recommendation.severity}] ${recommendation.title}`);
+      console.log(`  ${recommendation.message}`);
+      console.log(`  Suggestion: ${recommendation.suggestion}`);
     }
 
     console.log('');
