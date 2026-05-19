@@ -546,3 +546,14 @@ After:
 - бачить nested package.json
 - краще визначає framework/language/package manager
 - test files не зараховуються як production source
+
+## 0.0.9
+
+### Added
+- Vitest test runner
+- Fixture projects for analyzer tests
+- Tests for Nuxt detection
+- Tests for multi-framework detection
+- Tests for production source file counting
+- Tests for weak project recommendations
+- Score range test
