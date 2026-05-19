@@ -1,18 +1,43 @@
 {
-  "name": "@codehealth/analyzer",
+  "name": "@oleksandr-morlock/codehealth-ua",
   "version": "0.1.0",
+  "description": "Open-source code quality radar for JavaScript and TypeScript projects.",
   "type": "module",
-  "main": "src/index.ts",
-  "types": "src/index.ts",
   "bin": {
-    "codehealth": "src/cli.ts"
+    "codehealth": "dist/cli.js"
   },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "dev": "tsx src/cli.ts",
-    "test": "vitest run"
+    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run",
+    "prepublishOnly": "pnpm build && pnpm test"
   },
+  "keywords": [
+    "code-quality",
+    "typescript",
+    "javascript",
+    "cli",
+    "static-analysis",
+    "technical-debt",
+    "maintainability"
+  ],
+  "author": "Oleksandr Vasyliev",
+  "license": "MIT",
   "dependencies": {
     "fast-glob": "^3.3.3",
     "zod": "^4.1.13"
+  },
+  "devDependencies": {
+    "@types/node": "^25.8.0",
+    "typescript": "^6.0.3",
+    "tsx": "^4.22.1",
+    "vitest": "^4.1.6"
   }
 }
