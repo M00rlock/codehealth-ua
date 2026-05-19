@@ -1,21 +1,38 @@
 #!/usr/bin/env node
 
+import fs from 'node:fs/promises';
 import path from 'node:path';
 import { analyzeProject } from './index.js';
 
-const targetPath = process.argv[2];
-const isJsonOutput = process.argv.includes('--json');
+const args = process.argv.slice(2);
+
+const targetPath = args.find(arg => !arg.startsWith('--'));
+const isJsonOutput = args.includes('--json');
+
+const outIndex = args.indexOf('--out');
+const outputPath = outIndex >= 0 ? args[outIndex + 1] : undefined;
 
 if (!targetPath) {
-  console.error('Usage: codehealth <path-to-project>');
+  console.error('Usage: codehealth <path-to-project> [--json] [--out <file>]');
   process.exit(1);
 }
 
-const commandCwd = process.env.INIT_CWD ?? process.cwd();
-const absolutePath = path.resolve(commandCwd, targetPath);
+if (outIndex >= 0 && !outputPath) {
+  console.error('Missing output file after --out');
+  process.exit(1);
+}
 
-try {
-  const report = await analyzeProject(absolutePath);
+  const commandCwd = process.env.INIT_CWD ?? process.cwd();
+  const absolutePath = path.resolve(commandCwd, targetPath);
+
+  try {
+    const report = await analyzeProject(absolutePath);
+    if (outputPath) {
+    const absoluteOutputPath = path.resolve(commandCwd, outputPath);
+    await fs.writeFile(absoluteOutputPath, JSON.stringify(report, null, 2), 'utf-8');
+    console.log(`CodeHealth report saved to ${absoluteOutputPath}`);
+    process.exit(0);
+  }
 
   if (isJsonOutput) {
     console.log(JSON.stringify(report, null, 2));
