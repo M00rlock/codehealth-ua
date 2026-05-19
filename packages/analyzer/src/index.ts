@@ -13,6 +13,51 @@ import type {
   RiskLevel,
   TestHealth,
 } from './types.js';
+import {
+  IGNORE_PATTERNS,
+  SOURCE_FILE_PATTERNS,
+  TEST_FILE_PATTERNS,
+} from './patterns.js';
+
+  async function readJsonFile<T>(filePath: string): Promise<T | null> {
+    try {
+      const raw = await fs.readFile(filePath, 'utf-8');
+      return JSON.parse(raw) as T;
+    } catch {
+      return null;
+    }
+  }
+
+  type PackageJsonLike = {
+    name?: string;
+    packageManager?: string;
+    scripts?: Record<string, string>;
+    dependencies?: Record<string, string>;
+    devDependencies?: Record<string, string>;
+  };
+
+  async function findWorkspacePackageJsons(projectPath: string): Promise<PackageJsonLike[]> {
+  const packageJsonFiles = await fg(['**/package.json'], {
+    cwd: projectPath,
+    absolute: true,
+    ignore: [
+      '**/node_modules/**',
+      '**/.git/**',
+      '**/dist/**',
+      '**/build/**',
+      '**/.next/**',
+      '**/.nuxt/**',
+      '**/.output/**',
+      '**/coverage/**',
+    ],
+  });
+
+  const packageJsons = await Promise.all(
+    packageJsonFiles.map(file => readJsonFile<PackageJsonLike>(file)),
+  );
+
+  return packageJsons.filter((item): item is PackageJsonLike => Boolean(item));
+}
 
 function getRiskLevel(file: Omit<FileHealth, 'riskLevel'>): RiskLevel {
   let points = 0;
@@ -276,7 +321,17 @@ async function fileExists(filePath: string): Promise<boolean> {
   }
 }
 
-async function detectPackageManager(projectPath: string): Promise<PackageManager> {
+async function detectPackageManager(
+  projectPath: string,
+  packageJson?: { packageManager?: string },
+): Promise<PackageManager> {
+  const declaredPackageManager = packageJson?.packageManager;
+
+  if (declaredPackageManager?.startsWith('pnpm')) return 'pnpm';
+  if (declaredPackageManager?.startsWith('npm')) return 'npm';
+  if (declaredPackageManager?.startsWith('yarn')) return 'yarn';
+  if (declaredPackageManager?.startsWith('bun')) return 'bun';
+
   if (await fileExists(path.join(projectPath, 'pnpm-lock.yaml'))) {
     return 'pnpm';
   }
@@ -296,18 +351,7 @@ async function detectPackageManager(projectPath: string): Promise<PackageManager
   return 'unknown';
 }
 
-function detectFramework(packageJson: {
-  dependencies?: Record<string, string>;
-  devDependencies?: Record<string, string>;
-}): Framework {
-  const dependencies = packageJson.dependencies ?? {};
-  const devDependencies = packageJson.devDependencies ?? {};
-
-  const allDependencies = {
-    ...dependencies,
-    ...devDependencies,
-  };
-
+function detectFramework(allDependencies: Record<string, string>): Framework {
   if (allDependencies.nuxt) return 'nuxt';
   if (allDependencies.next) return 'next';
   if (allDependencies['@angular/core']) return 'angular';
@@ -321,11 +365,14 @@ function detectFramework(packageJson: {
   return 'unknown';
 }
 
-function detectLanguage(params: {
+async function detectLanguage(params: {
+  projectPath: string;
   hasTypeScript: boolean;
   sourceFiles: string[];
-}): ProjectLanguage {
-  const { hasTypeScript, sourceFiles } = params;
+}): Promise<ProjectLanguage> {
+  const { projectPath, hasTypeScript, sourceFiles } = params;
+
+  const hasTsConfig = await fileExists(path.join(projectPath, 'tsconfig.json'));
 
   const tsFiles = sourceFiles.filter(file => file.endsWith('.ts') || file.endsWith('.tsx'));
   const jsFiles = sourceFiles.filter(file => file.endsWith('.js') || file.endsWith('.jsx'));
@@ -334,7 +381,7 @@ function detectLanguage(params: {
     return 'mixed';
   }
 
-  if (hasTypeScript || tsFiles.length > 0) {
+  if (hasTypeScript || hasTsConfig || tsFiles.length > 0) {
     return 'typescript';
   }
 
@@ -347,70 +394,49 @@ function detectLanguage(params: {
 
 export async function analyzeProject(projectPath: string): Promise<CodeHealthReport> {
   const packageJsonPath = path.join(projectPath, 'package.json');
-  const packageJsonRaw = await fs.readFile(packageJsonPath, 'utf-8');
-  const packageJson = JSON.parse(packageJsonRaw) as {
-    name?: string;
-    scripts?: Record<string, string>;
-    dependencies?: Record<string, string>;
-    devDependencies?: Record<string, string>;
-  };
+const packageJsonRaw = await fs.readFile(packageJsonPath, 'utf-8');
+const packageJson = JSON.parse(packageJsonRaw) as PackageJsonLike;
 
-  const dependencies = packageJson.dependencies ?? {};
-  const devDependencies = packageJson.devDependencies ?? {};
-  const allDependencies = {
-    ...dependencies,
-    ...devDependencies,
-  };
+const workspacePackageJsons = await findWorkspacePackageJsons(projectPath);
 
-const sourceFiles = await fg(
-  [
-    'src/**/*.{ts,tsx,js,jsx,vue}',
-    'app/**/*.{ts,tsx,js,jsx,vue}',
-    'components/**/*.{ts,tsx,js,jsx,vue}',
-    'pages/**/*.{ts,tsx,js,jsx,vue}',
-    'layouts/**/*.{ts,tsx,js,jsx,vue}',
-    'composables/**/*.{ts,tsx,js,jsx}',
-    'server/**/*.{ts,tsx,js,jsx}',
-    'plugins/**/*.{ts,tsx,js,jsx}',
-    'utils/**/*.{ts,tsx,js,jsx}',
-    'stores/**/*.{ts,tsx,js,jsx}',
-    'middleware/**/*.{ts,tsx,js,jsx}',
-    'app.vue',
-  ],
-  {
-    cwd: projectPath,
-    absolute: true,
-    ignore: [
-      '**/node_modules/**',
-      '**/.nuxt/**',
-      '**/.output/**',
-      '**/dist/**',
-      '**/build/**',
-    ],
-  },
+const dependencies = Object.assign(
+  {},
+  ...workspacePackageJsons.map(item => item.dependencies ?? {}),
 );
 
-const testFiles = await fg(
-  [
-    '**/*.spec.{ts,tsx,js,jsx,vue}',
-    '**/*.test.{ts,tsx,js,jsx,vue}',
-    '**/__tests__/**/*.{ts,tsx,js,jsx,vue}',
-  ],
-  {
+const devDependencies = Object.assign(
+  {},
+  ...workspacePackageJsons.map(item => item.devDependencies ?? {}),
+);
+
+const allDependencies = {
+  ...dependencies,
+  ...devDependencies,
+};
+
+const scripts = Object.assign(
+  {},
+  ...workspacePackageJsons.map(item => item.scripts ?? {}),
+);
+
+  const sourceFiles = await fg(SOURCE_FILE_PATTERNS, {
     cwd: projectPath,
     absolute: true,
-    ignore: [
-      '**/node_modules/**',
-      '**/.nuxt/**',
-      '**/.output/**',
-      '**/dist/**',
-      '**/build/**',
-    ],
-  },
-);
+    ignore: IGNORE_PATTERNS,
+  });
+
+  const testFiles = await fg(TEST_FILE_PATTERNS, {
+    cwd: projectPath,
+    absolute: true,
+    ignore: IGNORE_PATTERNS,
+  });
+
+  const testFileSet = new Set(testFiles);
+
+  const productionSourceFiles = sourceFiles.filter(file => !testFileSet.has(file));
 
   const fileHealth: FileHealth[] = await Promise.all(
-    sourceFiles.map(async file => {
+    productionSourceFiles.map(async file => {
       const content = await fs.readFile(file, 'utf-8');
       const lines = content.split('\n');
 
@@ -429,8 +455,6 @@ const testFiles = await fg(
     }),
   );
 
-  const scripts = packageJson.scripts ?? {};
-
   const packageHealth: PackageHealth = {
     hasBuildScript: Boolean(scripts.build),
     hasTestScript: Boolean(scripts.test),
@@ -443,18 +467,22 @@ const testFiles = await fg(
   };
 
   const projectMeta: ProjectMeta = {
-    framework: detectFramework(packageJson),
-    language: detectLanguage({
+    framework: detectFramework(allDependencies),
+    language: await detectLanguage({
+      projectPath,
       hasTypeScript: packageHealth.hasTypeScript,
-      sourceFiles,
+      sourceFiles: productionSourceFiles,
     }),
-    packageManager: await detectPackageManager(projectPath),
+    packageManager: await detectPackageManager(projectPath, packageJson),
   };
 
-  const testRatio = sourceFiles.length === 0 ? 0 : testFiles.length / sourceFiles.length;
+  const testRatio =
+    productionSourceFiles.length === 0
+      ? 0
+      : testFiles.length / productionSourceFiles.length;
 
   const testHealth: TestHealth = {
-    sourceFiles: sourceFiles.length,
+    sourceFiles: productionSourceFiles.length,
     testFiles: testFiles.length,
     testRatio: Number(testRatio.toFixed(2)),
     status: testFiles.length === 0 ? 'none' : testRatio < 0.25 ? 'low' : 'ok',
