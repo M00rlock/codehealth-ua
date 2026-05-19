@@ -3,17 +3,21 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { analyzeProject } from './index.js';
+import { generateMarkdownReport } from './markdown.js';
 
 const args = process.argv.slice(2);
 
 const targetPath = args.find(arg => !arg.startsWith('--'));
 const isJsonOutput = args.includes('--json');
+const isMarkdownOutput = args.includes('--markdown') || args.includes('--md');
 
 const outIndex = args.indexOf('--out');
 const outputPath = outIndex >= 0 ? args[outIndex + 1] : undefined;
 
 if (!targetPath) {
-  console.error('Usage: codehealth <path-to-project> [--json] [--out <file>]');
+  console.error(
+    'Usage: codehealth <path-to-project> [--json] [--markdown] [--out <file>]',
+  );
   process.exit(1);
 }
 
@@ -27,15 +31,28 @@ if (outIndex >= 0 && !outputPath) {
 
   try {
     const report = await analyzeProject(absolutePath);
-    if (outputPath) {
+
+  if (outputPath) {
     const absoluteOutputPath = path.resolve(commandCwd, outputPath);
-    await fs.writeFile(absoluteOutputPath, JSON.stringify(report, null, 2), 'utf-8');
+
+    const outputContent = isMarkdownOutput
+      ? generateMarkdownReport(report)
+      : JSON.stringify(report, null, 2);
+
+    await fs.mkdir(path.dirname(absoluteOutputPath), { recursive: true });
+    await fs.writeFile(absoluteOutputPath, outputContent, 'utf-8');
+
     console.log(`CodeHealth report saved to ${absoluteOutputPath}`);
     process.exit(0);
   }
 
   if (isJsonOutput) {
     console.log(JSON.stringify(report, null, 2));
+    process.exit(0);
+  }
+
+  if (isMarkdownOutput) {
+    console.log(generateMarkdownReport(report));
     process.exit(0);
   }
 
