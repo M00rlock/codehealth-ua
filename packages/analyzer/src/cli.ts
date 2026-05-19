@@ -106,7 +106,8 @@ if (outIndex >= 0 && !outputPath) {
   console.log('');
   console.log(`Project: ${report.projectName}`);
   console.log(`Score: ${report.summary.score}/100`);
-  console.log(`Framework: ${report.projectMeta.framework}`);
+  console.log(`Frameworks: ${report.projectMeta.frameworks.join(', ')}`);
+  console.log(`Primary framework: ${report.projectMeta.primaryFramework}`);
   console.log(`Language: ${report.projectMeta.language}`);
   console.log(`Package manager: ${report.projectMeta.packageManager}`);
   console.log('');

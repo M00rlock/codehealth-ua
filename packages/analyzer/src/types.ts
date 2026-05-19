@@ -17,7 +17,8 @@ export type ProjectLanguage = 'typescript' | 'javascript' | 'mixed' | 'unknown';
 export type PackageManager = 'pnpm' | 'npm' | 'yarn' | 'bun' | 'unknown';
 
 export interface ProjectMeta {
-  framework: Framework;
+  frameworks: Framework[];
+  primaryFramework: Framework;
   language: ProjectLanguage;
   packageManager: PackageManager;
 }

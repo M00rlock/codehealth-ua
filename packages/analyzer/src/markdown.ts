@@ -30,7 +30,8 @@ export function generateMarkdownReport(report: CodeHealthReport): string {
 | Project | ${report.projectName} |
 | Score | ${report.summary.score}/100 |
 | Status | ${getScoreLabel(report.summary.score)} |
-| Framework | ${report.projectMeta.framework} |
+| Frameworks | ${report.projectMeta.frameworks.join(', ')} |
+| Primary framework | ${report.projectMeta.primaryFramework} |
 | Language | ${report.projectMeta.language} |
 | Package manager | ${report.projectMeta.packageManager} |
 

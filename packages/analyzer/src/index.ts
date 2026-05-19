@@ -351,18 +351,37 @@ async function detectPackageManager(
   return 'unknown';
 }
 
-function detectFramework(allDependencies: Record<string, string>): Framework {
-  if (allDependencies.nuxt) return 'nuxt';
-  if (allDependencies.next) return 'next';
-  if (allDependencies['@angular/core']) return 'angular';
-  if (allDependencies['@nestjs/core']) return 'nestjs';
-  if (allDependencies['@sveltejs/kit']) return 'sveltekit';
-  if (allDependencies.svelte) return 'svelte';
-  if (allDependencies.vue) return 'vue';
-  if (allDependencies.react) return 'react';
-  if (allDependencies.express) return 'express';
+function detectFrameworks(allDependencies: Record<string, string>): Framework[] {
+  const frameworks: Framework[] = [];
 
-  return 'unknown';
+  if (allDependencies.nuxt) frameworks.push('nuxt');
+  if (allDependencies.next) frameworks.push('next');
+  if (allDependencies['@angular/core']) frameworks.push('angular');
+  if (allDependencies['@nestjs/core']) frameworks.push('nestjs');
+  if (allDependencies['@sveltejs/kit']) frameworks.push('sveltekit');
+  if (allDependencies.svelte) frameworks.push('svelte');
+  if (allDependencies.vue) frameworks.push('vue');
+  if (allDependencies.react) frameworks.push('react');
+  if (allDependencies.express) frameworks.push('express');
+
+  return frameworks.length > 0 ? frameworks : ['unknown'];
+}
+
+function detectPrimaryFramework(frameworks: Framework[]): Framework {
+  const priority: Framework[] = [
+    'next',
+    'nuxt',
+    'angular',
+    'react',
+    'vue',
+    'sveltekit',
+    'svelte',
+    'nestjs',
+    'express',
+    'unknown',
+  ];
+
+  return priority.find(framework => frameworks.includes(framework)) ?? 'unknown';
 }
 
 async function detectLanguage(params: {
@@ -466,15 +485,18 @@ const scripts = Object.assign(
     devDependenciesCount: Object.keys(devDependencies).length,
   };
 
-  const projectMeta: ProjectMeta = {
-    framework: detectFramework(allDependencies),
-    language: await detectLanguage({
-      projectPath,
-      hasTypeScript: packageHealth.hasTypeScript,
-      sourceFiles: productionSourceFiles,
-    }),
-    packageManager: await detectPackageManager(projectPath, packageJson),
-  };
+const frameworks = detectFrameworks(allDependencies);
+
+const projectMeta: ProjectMeta = {
+  frameworks,
+  primaryFramework: detectPrimaryFramework(frameworks),
+  language: await detectLanguage({
+    projectPath,
+    hasTypeScript: packageHealth.hasTypeScript,
+    sourceFiles: productionSourceFiles,
+  }),
+  packageManager: await detectPackageManager(projectPath, packageJson),
+};
 
   const testRatio =
     productionSourceFiles.length === 0
