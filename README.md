@@ -511,3 +511,12 @@ MIT
 CodeHealth UA is currently in early active development.
 
 The project is not production-ready yet, but the local analyzer already works and can generate useful project health reports.
+
+## 0.0.5
+
+### Added
+- Markdown report generator
+- `--markdown` CLI flag
+- `--md` CLI alias
+- Markdown report export via `--out`
+- Automatic output directory creation
