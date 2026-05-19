@@ -403,7 +403,7 @@ The first public MVP should include:
 - [x] Add CLI help command
 - [x] Multiframework detection
 - [x] Add tests for analyzer
-- [ ] Add GitHub Actions CI
+- [x] Add GitHub Actions CI
 
 ### Future
 
