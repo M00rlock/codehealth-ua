@@ -1,0 +1,12 @@
+{
+  "name": "fixture-web",
+  "dependencies": {
+    "@angular/core": "^20.0.0",
+    "rxjs": "^7.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "eslint": "^9.0.0",
+    "prettier": "^3.0.0"
+  }
+}

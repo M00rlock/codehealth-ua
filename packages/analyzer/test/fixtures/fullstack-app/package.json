@@ -1,0 +1,9 @@
+{
+  "name": "fixture-fullstack-app",
+  "packageManager": "pnpm@10.0.0",
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "vitest",
+    "lint": "eslint ."
+  }
+}

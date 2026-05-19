@@ -402,7 +402,7 @@ The first public MVP should include:
 - [x] Add better source file patterns (v0.0.5)
 - [x] Add CLI help command
 - [x] Multiframework detection
-- [ ] Add tests for analyzer
+- [x] Add tests for analyzer
 - [ ] Add GitHub Actions CI
 
 ### Future
